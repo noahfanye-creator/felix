@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1.14 市场策略核心标的池</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #e2e8f0;
+            --text-sub: #94a3b8;
+            --accent-red: #ef4444; /* A股红 */
+            --accent-gold: #f59e0b; /* 重点高亮 */
+            --accent-blue: #3b82f6; /* 科技蓝 */
+            --tag-semi: #0ea5e9;
+            --tag-ai: #8b5cf6;
+            --tag-cpo: #10b981;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            margin: 0 0 10px 0;
+            color: var(--accent-gold);
+        }
+
+        .header p {
+            color: var(--text-sub);
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            margin-bottom: 20px;
+            padding-bottom: 5px;
+        }
+
+        .filter-btn {
+            background: var(--card-bg);
+            border: 1px solid #334155;
+            color: var(--text-sub);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .filter-btn.active {
+            background: var(--accent-blue);
+            color: white;
+            border-color: var(--accent-blue);
+        }
+
+        .card-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+
+        @media (min-width: 768px) {
+            .card-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .stock-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            border-left: 4px solid var(--accent-blue);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .stock-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .stock-code {
+            font-family: monospace;
+            background: #334155;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            color: var(--accent-gold);
+        }
+
+        .tag {
+            display: inline-block;
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .tag.semi { background: rgba(14, 165, 233, 0.2); color: var(--tag-semi); }
+        .tag.ai { background: rgba(139, 92, 246, 0.2); color: var(--tag-ai); }
+        .tag.cpo { background: rgba(16, 185, 129, 0.2); color: var(--tag-cpo); }
+
+        .logic-content {
+            font-size: 0.9rem;
+            color: var(--text-sub);
+            margin-bottom: 12px;
+        }
+
+        .logic-highlight {
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
+        .rating-box {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-top: 1px solid #334155;
+            padding-top: 10px;
+            margin-top: 10px;
+        }
+
+        .stars {
+            color: var(--accent-gold);
+            letter-spacing: 2px;
+        }
+
+        .recommendation-label {
+            font-size: 0.8rem;
+            color: var(--text-sub);
+        }
+
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 0.75rem;
+            color: #475569;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🚀 1.14 市场策略核心池</h1>
+        <p>基于机构视角：点刹降温后的逻辑切换</p>
+        <p style="font-size: 0.8rem; margin-top: 5px; color: #64748b;">重点方向：半导体后道 / 阿里生态 / 业绩硬科技</p>
+    </div>
+
+    <div class="filter-bar">
+        <div class="filter-btn active" onclick="filterStocks('all')">全部</div>
+        <div class="filter-btn" onclick="filterStocks('semi')">半导体/设备</div>
+        <div class="filter-btn" onclick="filterStocks('ai')">阿里/AI应用</div>
+        <div class="filter-btn" onclick="filterStocks('cpo')">光模块/CPO</div>
+    </div>
+
+    <div class="card-container" id="stockList">
+        </div>
+
+    <div class="footer">
+        <p>⚠️ 风险提示：本名单仅供内部策略参考，不构成具体买卖建议。</p>
+        <p>关注年报预告，业绩是核心。</p>
+    </div>
+
+    <script>
+        const stocks = [
+            {
+                name: "长川科技",
+                code: "300604",
+                category: "semi",
+                tagText: "半导体设备",
+                logic: "<span class='logic-highlight'>【首选】后道测试龙头。</span>H200受限倒逼国产替代加速，后道测试环节增速高于前道，且有并购资产加持，业绩弹性大。",
+                stars: "⭐⭐⭐⭐⭐",
+                recLevel: "强力关注"
+            },
+            {
+                name: "阿里巴巴-W",
+                code: "9988.HK",
+                category: "ai",
+                tagText: "港股/AI生态",
+                logic: "<span class='logic-highlight'>【高低切总龙头】</span>估值底部+通义千问接入刚需场景带来真实增量。资金从A股高位流出后的最佳承接池。",
+                stars: "⭐⭐⭐⭐⭐",
+                recLevel: "强力关注"
+            },
+            {
+                name: "华峰测控",
+                code: "688200",
+                category: "semi",
+                tagText: "半导体设备",
+                logic: "模拟测试机龙头，毛利极高，基本面扎实。市场风格切换向“业绩支撑”时的稳健防守反击品种。",
+                stars: "⭐⭐⭐⭐",
+                recLevel: "重点关注"
+            },
+            {
+                name: "中际旭创",
+                code: "300308",
+                category: "cpo",
+                tagText: "光模块/CPO",
+                logic: "<span class='logic-highlight'>【业绩为王】</span>虽然有H200扰动，但作为“卖铲子”的核心，业绩确定性最强。关注近期业绩预告。",
+                stars: "⭐⭐⭐⭐",
+                recLevel: "重点关注"
+            },
+             {
+                name: "安集科技",
+                code: "688019",
+                category: "semi",
+                tagText: "半导体材料",
+                logic: "核心耗材逻辑。亚先进制程扩产对耗材消耗量更大，国产替代确定性高。",
+                stars: "⭐⭐⭐⭐",
+                recLevel: "重点关注"
+            },
+            {
+                name: "三江购物",
+                code: "601116",
+                category: "ai",
+                tagText: "阿里/新零售",
+                logic: "A股映射逻辑。若阿里AI落地零售场景，作为老牌阿里概念股，具备题材炒作的爆发力。",
+                stars: "⭐⭐⭐",
+                recLevel: "观察跟进"
+            },
+            {
+                name: "新易盛",
+                code: "300502",
+                category: "cpo",
+                tagText: "光模块/CPO",
+                logic: "CPO双子星之一，新工艺提升带来业绩弹性。适合在业绩预告落地后寻找右侧机会。",
+                stars: "⭐⭐⭐",
+                recLevel: "观察跟进"
+            }
+        ];
+
+        function renderStocks(filterType) {
+            const container = document.getElementById('stockList');
+            container.innerHTML = '';
+            
+            const filteredStocks = filterType === 'all' 
+                ? stocks 
+                : stocks.filter(s => s.category === filterType);
+
+            filteredStocks.forEach(stock => {
+                const card = document.createElement('div');
+                card.className = 'stock-card';
+                // 根据分类设置边框颜色
+                let borderColor = '#3b82f6';
+                let tagClass = 'tag ';
+                if(stock.category === 'semi') { borderColor = '#0ea5e9'; tagClass += 'semi'; }
+                if(stock.category === 'ai') { borderColor = '#8b5cf6'; tagClass += 'ai'; }
+                if(stock.category === 'cpo') { borderColor = '#10b981'; tagClass += 'cpo'; }
+                
+                card.style.borderLeftColor = borderColor;
+
+                card.innerHTML = `
+                    <div class="card-header">
+                        <span class="stock-name">${stock.name}</span>
+                        <span class="stock-code">${stock.code}</span>
+                    </div>
+                    <span class="${tagClass}">${stock.tagText}</span>
+                    <div class="logic-content">
+                        ${stock.logic}
+                    </div>
+                    <div class="rating-box">
+                        <span class="recommendation-label">推荐热度：${stock.recLevel}</span>
+                        <span class="stars">${stock.stars}</span>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // 按钮点击交互
+        function filterStocks(type) {
+            // 更新按钮状态
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            // 渲染列表
+            renderStocks(type);
+        }
+
+        // 初始化
+        renderStocks('all');
+    </script>
+</body>
+</html>
